@@ -1,0 +1,33 @@
+{
+  "name": "stock-tracker-desktop",
+  "version": "2.3.0",
+  "description": "Desktop companion app for the ESP32-S3 stock tracker",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --publish never"
+  },
+  "repository": "https://github.com/jslriot/Esp32_Stocks-Tracker",
+  "dependencies": {
+    "electron-store": "^8.2.0",
+    "electron-updater": "^6.3.4",
+    "multicast-dns": "^7.2.5"
+  },
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.example.stocktracker",
+    "productName": "Stock Tracker",
+    "files": ["main.js", "preload.js", "renderer/**/*", "package.json"],
+    "mac": { "target": "dmg", "category": "public.app-category.finance" },
+    "win": { "target": "nsis" },
+    "linux": { "target": "AppImage" },
+    "publish": {
+      "provider": "github",
+      "owner": "jslriot",
+      "repo": "Esp32_Stocks-Tracker"
+    }
+  }
+}

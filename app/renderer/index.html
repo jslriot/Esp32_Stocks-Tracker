@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Stock Tracker</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">S</div>
+        <span>Stock Tracker</span>
+      </div>
+
+      <div class="device-preview-wrap">
+        <div class="device-preview-bezel">
+          <canvas id="devicePreview" width="128" height="128"></canvas>
+        </div>
+        <div class="device-preview-caption">Preview of your OLED</div>
+      </div>
+
+      <div class="device-card" id="deviceCard">
+        <div class="device-status">
+          <span class="dot" id="statusDot"></span>
+          <span id="statusText">Not connected</span>
+        </div>
+        <div class="device-ip" id="deviceIpText">—</div>
+        <div class="device-fw" id="deviceFwText"></div>
+        <div class="market-pill" id="marketPill" style="display:none;"></div>
+        <button id="rescanBtn" class="btn-ghost">Find device</button>
+        <div class="manual-ip">
+          <input id="manualIpInput" type="text" placeholder="Or enter IP">
+          <button id="manualIpBtn">Use</button>
+        </div>
+      </div>
+
+      <nav class="nav">
+        <button class="nav-btn active" data-view="watchlist"><span class="nav-icon">◆</span>Favorites</button>
+        <button class="nav-btn" data-view="symbols"><span class="nav-icon">☰</span>Symbols</button>
+        <button class="nav-btn" data-view="portfolio"><span class="nav-icon">◇</span>Portfolio</button>
+        <button class="nav-btn" data-view="settings"><span class="nav-icon">⚙</span>Settings</button>
+        <button class="nav-btn" data-view="firmware"><span class="nav-icon">⇪</span>Firmware</button>
+      </nav>
+    </aside>
+
+    <main class="content">
+      <section id="view-watchlist" class="view active">
+        <div class="section-label"><span class="section-icon">★</span>FAVORITES</div>
+        <p class="hint">Live from your ESP32 tracker. Click a card to see its chart.</p>
+        <div class="card-grid" id="watchlistGrid">
+          <div class="empty-state">Connect to a device to see live quotes.</div>
+        </div>
+      </section>
+
+      <section id="view-symbols" class="view">
+        <div class="section-label"><span class="section-icon">▣</span>ON DEVICE</div>
+        <p class="hint">Symbols currently shown on the tracker (max 8).</p>
+        <div class="chip-row" id="onDeviceChips"><div class="empty-state">Connect to a device first.</div></div>
+
+        <form id="addCustomForm" class="inline-form" style="margin-top:24px;">
+          <input id="addCustomInput" placeholder="Add a symbol (e.g. NFLX)" style="text-transform:uppercase;">
+          <button type="submit">Save</button>
+        </form>
+
+        <div class="section-label"><span class="section-icon">☆</span>SAVED</div>
+        <p class="hint">Your bookmarked symbols — add them to the device with one click.</p>
+        <div class="chip-row" id="savedChips"><div class="empty-state">No saved symbols yet.</div></div>
+
+        <div class="section-label"><span class="section-icon">▲</span>POPULAR</div>
+        <p class="hint">Commonly tracked stocks — click to save.</p>
+        <div class="chip-row" id="popularChips"></div>
+      </section>
+
+      <section id="view-portfolio" class="view">
+        <div class="balance-hero">
+          <div class="balance-label">Total balance</div>
+          <div class="balance-value" id="portfolioTotalValue">$0.00</div>
+          <div class="balance-pill" id="portfolioTotalPill"></div>
+        </div>
+        <p class="hint" style="margin-top:-14px;">Enter cost basis in the same currency you've set in Settings — the math assumes they match.</p>
+
+        <form id="holdingForm" class="inline-form">
+          <input id="holdingSymbol" placeholder="Symbol (e.g. AAPL)" required>
+          <input id="holdingShares" type="number" step="any" min="0" placeholder="Shares" required>
+          <input id="holdingCost" type="number" step="any" min="0" placeholder="Cost / share" required>
+          <button type="submit">Add holding</button>
+        </form>
+
+        <div class="section-label"><span class="section-icon">▤</span>ASSETS</div>
+        <div class="asset-list" id="portfolioList">
+          <div class="empty-state">No holdings yet.</div>
+        </div>
+      </section>
+
+      <section id="view-settings" class="view">
+        <div class="section-label"><span class="section-icon">⚙</span>SETTINGS</div>
+        <p class="hint">Synced directly to the device. Most changes apply immediately, no reboot needed.</p>
+
+        <form id="settingsForm" class="settings-form">
+          <label>Finnhub API key</label>
+          <input id="settingApiKey" type="text" placeholder="Leave blank to keep current key">
+          <div class="hint" style="margin-top:-8px;">Also saved locally so the app can pull historical charts.</div>
+
+          <label>Symbols (comma-separated)</label>
+          <input id="settingSymbols" type="text" placeholder="AAPL,TSLA,MSFT">
+
+          <label>Fetch interval (seconds)</label>
+          <input id="settingFetchSec" type="number" min="15">
+
+          <label>Cycle interval (seconds)</label>
+          <input id="settingCycleSec" type="number" min="2">
+
+          <label>Currency</label>
+          <select id="settingCurrency">
+            <option value="USD">USD ($)</option>
+            <option value="EUR">EUR (€)</option>
+            <option value="GBP">GBP (£)</option>
+            <option value="JPY">JPY (¥)</option>
+            <option value="INR">INR (₹)</option>
+            <option value="AUD">AUD (A$)</option>
+            <option value="CAD">CAD (C$)</option>
+            <option value="CHF">CHF (Fr)</option>
+            <option value="CNY">CNY (¥)</option>
+          </select>
+          <div class="hint" style="margin-top:-8px;">Prices are converted using a live exchange rate — not just relabeled.</div>
+
+          <label>Alert threshold (% change, 0 = off)</label>
+          <input id="settingAlertThreshold" type="number" step="0.1" min="0" placeholder="5">
+
+          <label>Display rotation</label>
+          <select id="settingRotation">
+            <option value="0">Normal</option>
+            <option value="2">Upside down (180°)</option>
+          </select>
+
+          <label class="checkbox-label"><input id="settingInvert" type="checkbox"> Invert display colors</label>
+
+          <label class="checkbox-label"><input id="settingMarketAware" type="checkbox"> Pause on "Market Closed" screen when closed</label>
+          <div class="hint" style="margin-top:-8px;">Off: keeps cycling through your stocks regardless of market hours (default). On: parks on the market-status screen while closed, then jumps straight back into your stocks the moment it opens.</div>
+
+          <label>Setup WiFi password</label>
+          <input id="settingApPassword" type="text" placeholder="Leave blank for open network">
+          <div class="hint" style="margin-top:-8px;">Secures the "StockTracker-Setup" hotspot used if you ever reconfigure WiFi. Applies next time setup mode runs.</div>
+
+          <button type="submit">Save to device</button>
+        </form>
+        <div id="settingsStatus" class="hint"></div>
+      </section>
+
+      <section id="view-firmware" class="view">
+        <div class="section-label"><span class="section-icon">⇪</span>FIRMWARE</div>
+        <p class="hint">Push a new compiled firmware (.bin) to the device over WiFi — no cable needed.</p>
+
+        <div class="fw-current">Current version: <b id="fwCurrentVersion">—</b></div>
+
+        <div class="fw-github-check">
+          <input id="fwRepoInput" placeholder="GitHub repo, e.g. yourname/stock-tracker">
+          <button id="fwCheckGithubBtn">Check for updates</button>
+        </div>
+        <div id="fwGithubStatus" class="hint"></div>
+        <div id="fwGithubUpdateBox" style="display:none;"></div>
+
+        <div class="fw-upload">
+          <input type="file" id="fwFileInput" accept=".bin">
+          <button id="fwUploadBtn">Upload &amp; install</button>
+        </div>
+        <div class="progress-bar" id="fwProgressBar" style="display:none;">
+          <div class="progress-fill" id="fwProgressFill"></div>
+        </div>
+        <div id="fwStatus" class="hint"></div>
+        <p class="hint">Build the .bin in Arduino IDE via Sketch &gt; Export Compiled Binary, then select it here. The device reboots automatically once the update finishes.</p>
+
+        <div class="section-label" style="margin-top:28px;"><span class="section-icon">◆</span>APP VERSION</div>
+        <div class="fw-current">Stock Tracker app: <b id="appVersionText">—</b></div>
+        <div id="appUpdateBanner" class="app-update-banner" style="display:none;"></div>
+      </section>
+    </main>
+  </div>
+
+  <div class="modal-backdrop" id="chartModalBackdrop">
+    <div class="modal">
+      <div class="modal-head">
+        <span id="chartModalSymbol">—</span>
+        <button class="modal-close" id="chartModalClose">&times;</button>
+      </div>
+      <div class="range-toggle">
+        <button class="range-btn active" data-range="1D">1D</button>
+        <button class="range-btn" data-range="1M">1M</button>
+        <button class="range-btn" data-range="1Y">1Y</button>
+      </div>
+      <div class="chart-area">
+        <canvas id="historyCanvas" width="640" height="280"></canvas>
+        <div id="chartStatus" class="hint" style="text-align:center;"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

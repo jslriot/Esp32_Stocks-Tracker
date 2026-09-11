@@ -1,0 +1,75 @@
+name: Release
+
+# Triggers when you push a version tag, e.g.:
+#   git tag v2.3.0
+#   git push origin v2.3.0
+#
+# Builds the desktop app for Windows/macOS/Linux (via electron-builder, which
+# also publishes the auto-update metadata files the app needs to detect new
+# versions), compiles the ESP32 firmware, and attaches everything to a
+# GitHub Release matching the tag — so end users just visit the Releases
+# page and download the installer for their OS. No terminal required on
+# their end.
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-app:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - run: npm install
+
+      # electron-builder builds the installer AND publishes it (plus the
+      # auto-update metadata) straight to the GitHub Release for this tag.
+      - run: npx electron-builder --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-firmware:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install arduino-cli
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | sh
+          echo "$PWD/bin" >> "$GITHUB_PATH"
+
+      - name: Install ESP32 core and libraries
+        run: |
+          arduino-cli core update-index --additional-urls https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
+          arduino-cli core install esp32:esp32 --additional-urls https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
+          arduino-cli lib install "Adafruit GFX Library" "Adafruit SH110X" "ArduinoJson"
+
+      - name: Compile firmware
+        run: |
+          arduino-cli compile \
+            --fqbn esp32:esp32:esp32s3:PartitionScheme=default \
+            --output-dir build \
+            firmware/stock_tracker
+          cp build/stock_tracker.ino.bin firmware.bin
+
+      - name: Attach firmware.bin to the release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: firmware.bin

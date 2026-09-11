@@ -1,0 +1,14 @@
+# Node / Electron
+app/node_modules/
+app/dist/
+app/out/
+
+# Arduino build output
+firmware/**/build/
+*.ino.bin
+*.ino.elf
+*.ino.map
+
+# OS cruft
+.DS_Store
+Thumbs.db
