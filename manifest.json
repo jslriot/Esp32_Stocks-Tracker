@@ -1,0 +1,13 @@
+{
+  "name": "Stock Tracker",
+  "version": "2.3.1",
+  "new_install_prompt_erase": true,
+  "builds": [
+    {
+      "chipFamily": "ESP32-S3",
+      "parts": [
+        { "path": "firmware-merged.bin", "offset": 0 }
+      ]
+    }
+  ]
+}
