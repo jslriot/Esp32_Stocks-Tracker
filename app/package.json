@@ -1,6 +1,6 @@
 {
   "name": "stock-tracker-desktop",
-  "version": "2.3.2",
+  "version": "2.3.3",
   "description": "Desktop companion app for the ESP32-S3 stock tracker",
   "main": "main.js",
   "scripts": {
